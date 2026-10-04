@@ -315,6 +315,10 @@ const redraw = () => { dirty = true; };
 window.__redraw = redraw;
 controls.addEventListener('change', redraw);
 addEventListener('resize', redraw);
+// вернулись на вкладку / в Safari из другого приложения — перерисовать кадр
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { resize(); redraw(); } });
+addEventListener('pageshow', () => { resize(); redraw(); });
+renderer.domElement.addEventListener('webglcontextrestored', () => { renderer.shadowMap.needsUpdate = true; redraw(); });
 // тени статичной сцены считаем один раз (и после переключения слоёв), а не каждый кадр
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = true;

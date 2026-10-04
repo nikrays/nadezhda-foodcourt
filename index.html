@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="3D-концепт летнего фудкорта санатория «Надежда», Анапа">
+<meta property="og:title" content="Фудкорт «Надежда» — 3D">
+<meta property="og:description" content="Летний фудкорт санатория «Надежда»: интерактивная 3D-сцена и фото-рендеры">
+<meta property="og:image" content="renders/front.jpg">
+<title>Фудкорт «Надежда»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* Раскладка: 3D на весь экран; ПК — стальная табличка слева сверху и панель справа; телефон — табличка сверху, ракурсы внизу, шторка с деталями */
+:root {
+  --ink: #17211d;          /* текст: графит с зелёным оттенком */
+  --ink-2: #4c5852;
+  --steel: #dfe3e4;        /* стальные панели */
+  --steel-2: #c5cbcd;
+  --glass: rgba(236, 239, 239, 0.86);
+  --ember: #d9581f;        /* активное состояние — цвет углей мангала */
+  --park: #2f5d46;
+  --line: rgba(23, 33, 29, 0.14);
+  --f-display: "Playfair Display", "Georgia", "Times New Roman", serif;
+  --f-ui: "Golos Text", "Segoe UI", -apple-system, system-ui, sans-serif;
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; overflow: hidden; background: #8fa3a8; color: var(--ink); font: 14px/1.4 var(--f-ui); -webkit-tap-highlight-color: transparent; }
+#app { position: fixed; inset: 0; }
+#view, #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+/* стальная табличка-логотип — как фасад стола-холодильника */
+.plate {
+  position: absolute; left: max(16px, env(safe-area-inset-left)); top: calc(14px + env(safe-area-inset-top, 0px));
+  padding: 10px 16px 11px; border-radius: 3px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #eef1f2, #c9cfd1);
+  box-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 6px 18px rgba(20, 30, 28, .22);
+  border: 1px solid #aeb5b7;
+  pointer-events: none;
+}
+.plate .name { font: 800 21px/1 var(--f-display); letter-spacing: .06em; color: #1b1f1f; white-space: nowrap; }
+.plate .sub { margin-top: 5px; font: 500 11px/1.2 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+
+/* метки на объектах */
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pin { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px; pointer-events: auto;
+  transform: translate(-14px, -14px); background: none; border: 0; padding: 0; }
+.pin .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ink); color: #fff; font: 600 12px/1 var(--f-ui); font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 3px 10px rgba(0,0,0,.3); }
+.pin .t { background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.pin.sel .n { background: var(--ember); }
+.pin .t { display: none; }
+.pin:hover .t, .pin.sel .t, .pin:focus-visible .t { display: block; }
+.pin:hover, .pin.sel { z-index: 2; }
+#labels.off { display: none; }
+
+/* панель (ПК) / шторка (телефон) */
+.panel { position: absolute; display: flex; flex-direction: column; gap: 14px; background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 10px 40px rgba(15, 25, 22, .25); }
+.sec h3 { margin: 0 0 8px; font: 600 11px/1 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.chip { border: 1px solid var(--line); background: rgba(255,255,255,.55); border-radius: 6px; padding: 8px 10px; text-align: left; font-weight: 500; }
+.chip:hover { background: #fff; }
+.chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.items { list-style: none; margin: 0; padding: 0; display: grid; }
+.items button { width: 100%; display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; text-align: left;
+  border: 0; background: none; padding: 7px 4px; border-radius: 6px; }
+.items button:hover { background: rgba(255,255,255,.6); }
+.items .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff;
+  font: 600 11px/1 var(--f-ui); font-variant-numeric: tabular-nums; margin-top: 1px; }
+.items .sel .n { background: var(--ember); }
+.items .nm { font-weight: 500; }
+.items .dm { display: block; color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.tg { border: 1px solid var(--line); background: rgba(255,255,255,.55); border-radius: 999px; padding: 6px 12px 6px 10px; display: inline-flex; align-items: center; gap: 7px; }
+.tg::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--steel-2); }
+.tg.on::before { background: var(--park); }
+.photo { display: grid; gap: 6px; }
+.photo .bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.photo .bar i { display: block; height: 100%; width: 0; background: var(--ember); transition: width .2s; }
+.photo small { color: var(--ink-2); }
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.gallery button { padding: 0; border: 0; border-radius: 4px; overflow: hidden; aspect-ratio: 16/9; background: var(--steel-2); }
+.gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.about p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+
+/* карточка выбранного объекта */
+.card { position: absolute; background: #fff; border-radius: 8px; padding: 14px 16px 14px; box-shadow: 0 12px 34px rgba(15, 25, 22, .28);
+  display: grid; gap: 6px; max-width: 360px; }
+.card .top { display: flex; align-items: baseline; gap: 10px; justify-content: space-between; }
+.card h2 { margin: 0; font: 700 19px/1.15 var(--f-display); text-wrap: balance; }
+.card .dims { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--park); }
+.card p { margin: 0; color: var(--ink-2); }
+.card .x { border: 0; background: none; font-size: 20px; line-height: 1; padding: 2px 4px; color: var(--ink-2); }
+.hint { position: absolute; left: 50%; transform: translateX(-50%); background: rgba(23,33,29,.82); color: #fff; padding: 8px 14px; border-radius: 999px; font-size: 13px; white-space: nowrap; transition: opacity .6s; pointer-events: none; }
+.hint.gone { opacity: 0; }
+#loader { position: absolute; inset: 0; display: grid; place-items: center; background: #c9d2d3; z-index: 20; transition: opacity .5s; }
+#loader.done { opacity: 0; pointer-events: none; }
+#loader .box { display: grid; gap: 10px; justify-items: center; }
+#loader .name { font: 800 26px/1 var(--f-display); letter-spacing: .06em; }
+#loader small { color: var(--ink-2); letter-spacing: .08em; }
+.lightbox { position: absolute; inset: 0; z-index: 30; background: rgba(10,14,12,.92); display: grid; place-items: center; padding: 16px; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
+.lightbox .x { position: absolute; right: 16px; top: calc(12px + env(safe-area-inset-top, 0px)); border: 0; background: rgba(255,255,255,.15); color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 22px; }
+.lightbox .nav { position: absolute; top: 50%; transform: translateY(-50%); border: 0; background: rgba(255,255,255,.15); color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 22px; }
+.lightbox .prev { left: 12px; } .lightbox .next { right: 12px; }
+
+/* ---- ПК ---- */
+@media (min-width: 900px) {
+  .panel { right: 16px; top: 16px; bottom: 16px; width: 300px; padding: 16px; border-radius: 10px; overflow-y: auto; }
+  .card { left: 16px; bottom: 52px; }
+  .hint { bottom: 16px; left: calc(50% - 158px); }
+  .mob { display: none !important; }
+}
+/* ---- телефон ---- */
+@media (max-width: 899px) {
+  .plate { padding: 7px 11px 8px; }
+  .plate .name { font-size: 15px; }
+  .plate .sub { font-size: 9.5px; margin-top: 4px; }
+  .pin:hover .t { display: none; }
+  .pin .n { width: 24px; height: 24px; font-size: 11px; }
+  .dock { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 8px; align-items: center; }
+  .dock .scroll { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  .dock .scroll::-webkit-scrollbar { display: none; }
+  .dock .chip { flex: none; background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 10px 14px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  .dock .chip.on { background: var(--ink); }
+  .more { position: absolute; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); border: 0; background: var(--ink); color: #fff;
+    border-radius: 999px; padding: 10px 14px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+  .panel { left: 0; right: 0; bottom: 0; max-height: 72%; padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 14px 14px 0 0;
+    overflow-y: auto; transform: translateY(105%); transition: transform .35s cubic-bezier(.2,.8,.2,1); z-index: 10; }
+  .panel.open { transform: none; }
+  .panel .grab { align-self: center; width: 40px; height: 5px; border-radius: 3px; background: var(--steel-2); border: 0; padding: 0; margin-bottom: 2px; }
+  .panel .views-sec, .desk { display: none !important; }
+  .card { left: 12px; right: 12px; max-width: none; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); padding: 12px 14px; }
+  .hint { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .gallery { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .panel { transition: none; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+    "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.15/build/index.module.js",
+    "three-gpu-pathtracer": "https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.26/build/index.module.js"
+  }
+}
+</script>
+
+<div id="app">
+  <div id="view"></div>
+  <div id="labels"></div>
+
+  <div class="plate"><div class="name">САНАТОРИЙ НАДЕЖДА</div><div class="sub">Летний фудкорт · Анапа</div></div>
+
+  <aside class="panel" id="panel" aria-label="Управление сценой">
+    <button class="grab mob" id="grab" aria-label="Закрыть"></button>
+    <section class="sec views-sec"><h3>Ракурсы</h3><div class="views" id="views"></div></section>
+    <section class="sec"><h3>Оборудование</h3><ul class="items" id="items"></ul></section>
+    <section class="sec"><h3>Показать</h3><div class="toggles" id="toggles"></div></section>
+    <section class="sec"><h3>Готовые рендеры</h3><div class="gallery" id="gallery"></div></section>
+    <section class="sec about"><h3>О месте</h3>
+      <p>Окружение собрано по фото территории санатория «Надежда» (Анапа, ул. Калинина, 30): корпуса с синей мансардой и розовыми пилястрами, столовая, голубые ели и туи, плитка из мытого бетона, открытый бассейн. Точное место фудкорта на территории — условное.</p>
+    </section>
+  </aside>
+
+  <div class="dock mob"><div class="scroll" id="dockViews"></div></div>
+  <button class="more mob" id="more">Детали</button>
+
+  <div class="card" id="card" hidden>
+    <div class="top"><h2 id="cardName"></h2><button class="x" id="cardClose" aria-label="Закрыть карточку">×</button></div>
+    <div class="dims" id="cardDims"></div>
+    <p id="cardNote"></p>
+  </div>
+
+  <div class="hint" id="hint"></div>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <img id="lbImg" alt="">
+    <button class="nav prev" id="lbPrev" aria-label="Предыдущий">‹</button>
+    <button class="nav next" id="lbNext" aria-label="Следующий">›</button>
+    <button class="x" id="lbClose" aria-label="Закрыть">×</button>
+  </div>
+
+  <div id="loader"><div class="box"><div class="name">САНАТОРИЙ НАДЕЖДА</div><small id="loadText">загрузка сцены…</small></div></div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
